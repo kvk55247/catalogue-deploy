@@ -27,13 +27,14 @@ pipeline {
                 script {
                     withAWS(credentials: 'aws-creds', region: 'us-east-1') {
                          sh """  
-                             aws eks update-kubeconfig --region $REGION -- name "$PROJECT-${params.deploy_to}" 
+                             aws eks update-kubeconfig --region $REGION --name "$PROJECT-${params.deploy_to}" 
                              kubectl get nodes
                          """
                 }
             }
         }
     }
+}
     post { 
         always { 
             echo 'I will always say Hello again!'
@@ -46,5 +47,5 @@ pipeline {
             echo 'hi, this is failure'
         }
     }
-    
 }
+    
