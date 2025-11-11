@@ -32,12 +32,34 @@ pipeline {
                              kubectl apply -f 01-namespace.yaml
                              sed "s/IMAGE_VERSION/${params.appVersion}/g" values-${params.deploy_to}.yaml
                              helm upgrade --install $COMPONENT -f  values-${params.deploy_to}.yaml -n $PROJECT .
-                         """
+                       """
+                    }
+                }
+            }
+        }
+        stage ('check status') {
+            steps{
+                script{
+                    def deploymentstatus = sh(returnStdout: true, script: "kubectl rollout status deployment/catalogue --timeout=30s || echo failed").trim()
+                    if (deploymentstatus.contains("successfully rolled out")) {
+                        echo "deployment is success"
+                    } else {
+                        sh """
+                            helm rollback $COMPONENT -n $PROJECT
+                            sleep 20
+                        """
+                         def rollbackstatus = sh(returnStdout: true, script: "kubectl rollout status deployment/catalogue --timeout=30s || echo failed").trim()
+                        if (deploymentstatus.contains("successfully rolled out")) {
+                             error  ("deployment is failure, rollback is success")
+                        }
+                        else {
+                            echo "deployment is failure, rollback is failure.Application is not running"
+                        }
+                    }
                 }
             }
         }
     }
-}
     post { 
         always { 
             echo 'I will always say Hello again!'
