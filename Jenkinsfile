@@ -40,20 +40,22 @@ pipeline {
         stage ('check status') {
             steps{
                 script{
-                    def deploymentstatus = sh(returnStdout: true, script: "kubectl rollout status deployment/catalogue --timeout=30s || echo failed").trim()
-                    if (deploymentstatus.contains("successfully rolled out")) {
-                        echo "deployment is success"
-                    } else {
-                        sh """
-                            helm rollback $COMPONENT -n $PROJECT
-                            sleep 20
-                        """
-                         def rollbackstatus = sh(returnStdout: true, script: "kubectl rollout status deployment/catalogue --timeout=30s || echo failed").trim()
+                    withAWS(credentials: 'aws-creds', region: 'us-east-1') {
+                        def deploymentstatus = sh(returnStdout: true, script: "kubectl rollout status deployment/catalogue --timeout=30s || echo failed").trim()
                         if (deploymentstatus.contains("successfully rolled out")) {
-                             error  ("deployment is failure, rollback is success")
-                        }
-                        else {
-                            echo "deployment is failure, rollback is failure.Application is not running"
+                            echo "deployment is success"
+                        } else {
+                            sh """
+                                helm rollback $COMPONENT -n $PROJECT
+                                sleep 20
+                            """
+                            def rollbackstatus = sh(returnStdout: true, script: "kubectl rollout status deployment/catalogue --timeout=30s || echo failed").trim()
+                            if (deploymentstatus.contains("successfully rolled out")) {
+                                error  ("deployment is failure, rollback is success")
+                            }
+                            else {
+                                echo "deployment is failure, rollback is failure.Application is not running"
+                            }
                         }
                     }
                 }
